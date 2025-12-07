@@ -1,23 +1,15 @@
 <!DOCTYPE html>
 <html lang="fa">
-<head>
-  <meta charset="UTF-8" />
-  <title>BPMS OKCS</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="manifest" href="/manifest.json" />
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <title>BPMS PWA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="manifest" href="manifest.json" />
+  </head>
+  <body dir="rtl" style="font-family: sans-serif; padding: 20px">
+    <h2>BPMS PWA</h2>
+    <p id="status">در حال اتصال به سرور Push...</p>
 
-  <h2>BPMS PWA</h2>
-  <p>در حال اتصال به سرور Push...</p>
-
-  <script src="/app.js"></script>
-
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/service-worker.js");
-    }
-  </script>
-
-</body>
+    <script src="app.js"></script>
+  </body>
 </html>
