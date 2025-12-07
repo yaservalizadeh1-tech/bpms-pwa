@@ -1,6 +1,7 @@
 const PUBLIC_KEY = "BF7omY3Yjy4wiyhChKcbpCGGfVJQJbE4LEqKTnstG1gHgtd9ccLDpSypV-FTuMBWCiZj1VnQptBQsnPYzDDvmAs";
 const SERVER_URL = "https://bpms-push.onrender.com/subscribe";
 
+// تبدیل کلید VAPID به Uint8Array
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)
@@ -16,6 +17,7 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
+// ثبت توکن پوش و ارسال به سرور
 async function subscribeUser() {
   const reg = await navigator.serviceWorker.ready;
 
@@ -35,16 +37,17 @@ async function subscribeUser() {
   console.log("✅ Push subscription sent to server");
 }
 
+// شروع فرآیند
 async function init() {
   if ("Notification" in window) {
     const permission = await Notification.requestPermission();
-    console.log("Permission:", permission);
+    console.log("🔔 Notification permission:", permission);
   }
 
   if ("serviceWorker" in navigator && "PushManager" in window) {
     subscribeUser();
   } else {
-    console.warn("Push not supported");
+    console.warn("❌ Push messaging is not supported");
   }
 }
 
