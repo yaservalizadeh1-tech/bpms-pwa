@@ -1,14 +1,15 @@
 const PUBLIC_KEY = "BF7omY3Yjy4wiyhChKcbpCGGfVJQJbE4LEqKTnstG1gHgtd9ccLDpSypV-FTuMBWCiZj1VnQptBQsnPYzDDvmAs";
+const SERVER_URL = "https://bpms-push.onrender.com/subscribe"; // آدرس سرور Render خودت
 
 async function subscribeUser() {
   const reg = await navigator.serviceWorker.ready;
 
   const sub = await reg.pushManager.subscribe({
     userVisibleOnly: true,
-    applicationServerKey: PUBLIC_KEY
+    applicationServerKey: urlBase64ToUint8Array(PUBLIC_KEY)
   });
 
-  await fetch("https://bpms-528w.onrender.com/subscribe", {
+  await fetch(SERVER_URL, {
     method: "POST",
     body: JSON.stringify(sub),
     headers: {
@@ -16,15 +17,34 @@ async function subscribeUser() {
     }
   });
 
-  console.log("Subscribed to push");
+  console.log("✅ Push subscription sent to server");
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
 
 async function init() {
-  if (Notification.permission !== "granted") {
+  if ("Notification" in window && Notification.permission !== "granted") {
     await Notification.requestPermission();
   }
 
-  subscribeUser();
+  if ("serviceWorker" in navigator && "PushManager" in window) {
+    subscribeUser();
+  } else {
+    console.warn("Push messaging is not supported");
+  }
 }
 
 init();
