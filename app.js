@@ -1,51 +1,105 @@
-const PUBLIC_KEY = "BF7omY3Yjy4wiyhChKcbpCGGfVJQJbE4LEqKTnstG1gHgtd9ccLDpSypV-FTuMBWCiZj1VnQptBQsnPYzDDvmAs";
-const SERVER_URL = "https://bpms-push.onrender.com/subscribe";
+import http from "http";
+import fetch from "node-fetch";
+import webpush from "web-push";
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = "=".repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
+// کلیدهای VAPID تو
+const VAPID_PUBLIC = "BF7omY3Yjy4wiyhChKcbpCGGfVJQJbE4LEqKTnstG1gHgtd9ccLDpSypV-FTuMBWCiZj1VnQptBQsnPYzDDvmAs";
+const VAPID_PRIVATE = "lQ2X4F8mnflnKEsY7kAiDRghHpUiWWLHtaNi7u8PLe0"; // اینو باید از خودت بگیرم یا جایگزین کنی
 
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
+// اطلاعات ورود به BPMS
+const BPMS_USER = "920334276";
+const BPMS_PASS = "0019408439";
 
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+webpush.setVapidDetails(
+  "mailto:example@example.com",
+  VAPID_PUBLIC,
+  VAPID_PRIVATE
+);
 
-async function subscribeUser() {
-  const reg = await navigator.serviceWorker.ready;
+let lastTicketId = null;
+let subscribers = [];
+let authCookie = null;
 
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(PUBLIC_KEY)
-  });
+async function loginToBPMS() {
+  try {
+    const res = await fetch("https://bizagiback.okcs.com/api/Account/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        username: BPMS_USER,
+        password: BPMS_PASS
+      })
+    });
 
-  await fetch(SERVER_URL, {
-    method: "POST",
-    body: JSON.stringify(sub),
-    headers: {
-      "Content-Type": "application/json"
+    const setCookie = res.headers.get("set-cookie");
+    if (setCookie && setCookie.includes(".ASPXAUTH")) {
+      authCookie = setCookie.split(";")[0];
+      console.log("✅ Logged in to BPMS");
+    } else {
+      console.log("❌ Login failed: no auth cookie");
     }
+  } catch (err) {
+    console.log("❌ Login error:", err);
+  }
+}
+
+async function checkTickets() {
+  if (!authCookie) {
+    await loginToBPMS();
+    if (!authCookie) return;
+  }
+
+  try {
+    const res = await fetch("https://bpms.okcs.com/Rest/Inbox/FullSummary?taskState=all", {
+      headers: {
+        "Cookie": authCookie
+      }
+    });
+
+    const data = await res.json();
+    const latest = data[0];
+    const currentId = latest.taskId || latest.id || latest.caseId;
+
+    if (lastTicketId === null) {
+      lastTicketId = currentId;
+      return;
+    }
+
+    if (currentId !== lastTicketId) {
+      lastTicketId = currentId;
+      sendPush("تیکت جدید", latest.taskName || "یک تیکت جدید ثبت شد");
+    }
+  } catch (err) {
+    console.log("❌ Error checking tickets:", err);
+    authCookie = null;
+  }
+}
+
+function sendPush(title, body) {
+  subscribers.forEach(sub => {
+    webpush.sendNotification(sub, JSON.stringify({ title, body }))
+      .catch(err => console.log("Push error:", err));
   });
-
-  console.log("✅ Push subscription sent to server");
 }
 
-async function init() {
-  if ("Notification" in window) {
-    const permission = await Notification.requestPermission();
-    console.log("🔔 Notification permission:", permission);
-  }
+setInterval(checkTickets, 30000);
 
-  if ("serviceWorker" in navigator && "PushManager" in window) {
-    subscribeUser();
+const server = http.createServer((req, res) => {
+  if (req.method === "POST" && req.url === "/subscribe") {
+    let body = "";
+    req.on("data", chunk => body += chunk);
+    req.on("end", () => {
+      const sub = JSON.parse(body);
+      subscribers.push(sub);
+      res.writeHead(201);
+      res.end("✅ Subscribed");
+    });
   } else {
-    console.warn("❌ Push messaging is not supported");
+    res.writeHead(200);
+    res.end("BPMS Push Server Running");
   }
-}
+});
 
-init();
+server.listen(3000, () => console.log("🚀 Server running on port 3000"));
