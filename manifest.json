@@ -1,9 +1,9 @@
 {
   "name": "OKCS BPMS",
   "short_name": "BPMS",
-  "start_url": "/bpms/",
+  "start_url": "/bpms-pwa/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#0d6efd",
+  "theme_color": "#0de6fd",
   "icons": []
 }
