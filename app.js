@@ -1,5 +1,20 @@
 const PUBLIC_KEY = "BF7omY3Yjy4wiyhChKcbpCGGfVJQJbE4LEqKTnstG1gHgtd9ccLDpSypV-FTuMBWCiZj1VnQptBQsnPYzDDvmAs";
-const SERVER_URL = "https://bpms-push.onrender.com/subscribe"; // آدرس سرور Render خودت
+const SERVER_URL = "https://bpms-push.onrender.com/subscribe";
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
 
 async function subscribeUser() {
   const reg = await navigator.serviceWorker.ready;
@@ -20,30 +35,16 @@ async function subscribeUser() {
   console.log("✅ Push subscription sent to server");
 }
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = "=".repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
-
 async function init() {
-  if ("Notification" in window && Notification.permission !== "granted") {
-    await Notification.requestPermission();
+  if ("Notification" in window) {
+    const permission = await Notification.requestPermission();
+    console.log("Permission:", permission);
   }
 
   if ("serviceWorker" in navigator && "PushManager" in window) {
     subscribeUser();
   } else {
-    console.warn("Push messaging is not supported");
+    console.warn("Push not supported");
   }
 }
 
